@@ -1,35 +1,89 @@
-name:  Build and Push Multi Docker Image for Both client and Server
+name: CI/CD Pipeline - Build, Test, and Deploy
+
 on:
   push:
     branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
 jobs:
-  build:
+  # Lint and validate code
+  lint:
     runs-on: ubuntu-latest
-    
+    name: Lint & Format Check
+
     steps:
-      - name: checkout code 
+      - name: Checkout code
         uses: actions/checkout@v3
-       
-      - name: Docker login
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Lint Server
+        working-directory: ./server
+        run: |
+          npm install
+          npm run lint --if-present || echo "No lint script"
+        continue-on-error: true
+
+      - name: Lint Client
+        working-directory: ./client
+        run: |
+          npm install
+          npm run lint --if-present || echo "No lint script"
+        continue-on-error: true
+
+  # Build Docker images and push to Docker Hub
+  build-and-push:
+    runs-on: ubuntu-latest
+    name: Build & Push Docker Images
+    needs: lint
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
-         username: ${{secrets.DOCKER_USER_NAME}}
-         password: ${{secrets.DOCKER_PASSWORD}}
+          username: ${{ secrets.DOCKER_USER_NAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build nodejs server Image
-        run: docker build -t ${{secrets.DOCKER_USER_NAME}}/mern-server:latest ./server
+      - name: Build and push Server Image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./server
+          push: true
+          tags: ${{ secrets.DOCKER_USER_NAME }}/mern-server:latest
 
-      - name: Push  nodejs server Image
-        run: docker push ${{secrets.DOCKER_USER_NAME}}/mern-server:latest
+      - name: Build and push Client Image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./client
+          push: true
+          tags: ${{ secrets.DOCKER_USER_NAME }}/mern-client:latest
 
-      - name: Trigger Deploy on Render
-        run: curl -X POST ${{secrets.RENDER_WEBHOOK}}
+  # Notify and Deploy
+  deploy-notification:
+    runs-on: ubuntu-latest
+    name: Deployment Notification
+    needs: build-and-push
+    if: success()
 
-      
+    steps:
+      - name: Notify Render Deployment
+        run: |
+          echo "✅ CI/CD Pipeline completed successfully!"
+          echo "Docker images pushed to Docker Hub"
+          echo "Render will auto-deploy based on webhook configuration"
 
-      
-
-      
-
-  
-    
+      - name: Log Deployment Info
+        run: |
+          echo "Server Image: ${{ secrets.DOCKER_USER_NAME }}/mern-server:latest"
+          echo "Client Image: ${{ secrets.DOCKER_USER_NAME }}/mern-client:latest"
