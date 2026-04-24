@@ -7,10 +7,10 @@ on:
     branches: ["main"]
 
 jobs:
-  # Lint and validate code
-  lint:
+  # Build validation
+  validate-build:
     runs-on: ubuntu-latest
-    name: Lint & Format Check
+    name: Validate Build
 
     steps:
       - name: Checkout code
@@ -21,25 +21,23 @@ jobs:
         with:
           node-version: "18"
 
-      - name: Lint Server
+      - name: Validate Server Build
         working-directory: ./server
         run: |
           npm install
-          npm run lint --if-present || echo "No lint script"
-        continue-on-error: true
+          npm run build --if-present || node -c index.js
 
-      - name: Lint Client
+      - name: Validate Client Build
         working-directory: ./client
         run: |
           npm install
-          npm run lint --if-present || echo "No lint script"
-        continue-on-error: true
+          npm run build
 
   # Build Docker images and push to Docker Hub
   build-and-push:
     runs-on: ubuntu-latest
     name: Build & Push Docker Images
-    needs: lint
+    needs: validate-build
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
