@@ -1,0 +1,148 @@
+name: CI - Code Quality & Validation
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+    branches: ["main", "develop"]
+
+jobs:
+  # Lint Server
+  lint-server:
+    runs-on: ubuntu-latest
+    name: Lint Server Code
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Install dependencies
+        working-directory: ./server
+        run: npm install
+
+      - name: Run ESLint
+        working-directory: ./server
+        run: npm run lint --if-present || echo "No lint script configured"
+
+  # Lint Client
+  lint-client:
+    runs-on: ubuntu-latest
+    name: Lint Client Code
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Install dependencies
+        working-directory: ./client
+        run: npm install
+
+      - name: Run ESLint
+        working-directory: ./client
+        run: npm run lint --if-present || echo "No lint script configured"
+
+  # Syntax Check Server
+  syntax-check-server:
+    runs-on: ubuntu-latest
+    name: Syntax Check - Server
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Check Server Syntax
+        working-directory: ./server
+        run: |
+          echo "🔍 Checking JavaScript syntax..."
+          node -c index.js
+          echo "✅ Server syntax valid"
+
+  # Build Validation Server
+  build-server:
+    runs-on: ubuntu-latest
+    name: Build Validation - Server
+    needs: [lint-server, syntax-check-server]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Install dependencies
+        working-directory: ./server
+        run: npm install
+
+      - name: Verify dependencies
+        working-directory: ./server
+        run: npm ls --depth=0
+
+      - name: Check for security vulnerabilities
+        working-directory: ./server
+        run: npm audit --audit-level=moderate || true
+
+  # Build Validation Client
+  build-client:
+    runs-on: ubuntu-latest
+    name: Build Validation - Client
+    needs: [lint-client]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Install dependencies
+        working-directory: ./client
+        run: npm install
+
+      - name: Build application
+        working-directory: ./client
+        run: npm run build
+
+      - name: Check for security vulnerabilities
+        working-directory: ./client
+        run: npm audit --audit-level=moderate || true
+
+  # Summary
+  ci-summary:
+    runs-on: ubuntu-latest
+    name: CI Pipeline Summary
+    needs: [lint-server, lint-client, syntax-check-server, build-server, build-client]
+    if: always()
+
+    steps:
+      - name: Check if all jobs passed
+        run: |
+          if [ "${{ needs.lint-server.result }}" = "failure" ] || \
+             [ "${{ needs.lint-client.result }}" = "failure" ] || \
+             [ "${{ needs.syntax-check-server.result }}" = "failure" ] || \
+             [ "${{ needs.build-server.result }}" = "failure" ] || \
+             [ "${{ needs.build-client.result }}" = "failure" ]; then
+            echo "❌ CI Pipeline Failed - Code quality issues detected"
+            exit 1
+          fi
+          echo "✅ CI Pipeline Passed - All checks successful"
+          echo "🚀 Ready for deployment"

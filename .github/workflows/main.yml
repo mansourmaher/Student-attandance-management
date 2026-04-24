@@ -1,87 +1,14 @@
-name: CI/CD Pipeline - Build, Test, and Deploy
+# This workflow has been split into separate CI and CD pipelines
+# 
+# CI Pipeline: ci.yml
+#   - Runs on: push and pull_request
+#   - Checks: Linting, syntax errors, build validation
+#   - Must pass before CD can proceed
+#
+# CD Pipeline: cd.yml
+#   - Runs on: push to main (only after CI passes)
+#   - Actions: Build Docker images, push to Docker Hub
+#   - Deploy: Render auto-deploys on image push
+#
+# See ci.yml and cd.yml for detailed pipeline configurations
 
-on:
-  push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main"]
-
-jobs:
-  # Build validation
-  validate-build:
-    runs-on: ubuntu-latest
-    name: Validate Build
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: "18"
-
-      - name: Validate Server Build
-        working-directory: ./server
-        run: |
-          npm install
-          npm run build --if-present || node -c index.js
-
-      - name: Validate Client Build
-        working-directory: ./client
-        run: |
-          npm install
-          npm run build
-
-  # Build Docker images and push to Docker Hub
-  build-and-push:
-    runs-on: ubuntu-latest
-    name: Build & Push Docker Images
-    needs: validate-build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USER_NAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push Server Image
-        uses: docker/build-push-action@v4
-        with:
-          context: ./server
-          push: true
-          tags: ${{ secrets.DOCKER_USER_NAME }}/mern-server:latest
-
-      - name: Build and push Client Image
-        uses: docker/build-push-action@v4
-        with:
-          context: ./client
-          push: true
-          tags: ${{ secrets.DOCKER_USER_NAME }}/mern-client:latest
-
-  # Notify and Deploy
-  deploy-notification:
-    runs-on: ubuntu-latest
-    name: Deployment Notification
-    needs: build-and-push
-    if: success()
-
-    steps:
-      - name: Notify Render Deployment
-        run: |
-          echo "✅ CI/CD Pipeline completed successfully!"
-          echo "Docker images pushed to Docker Hub"
-          echo "Render will auto-deploy based on webhook configuration"
-
-      - name: Log Deployment Info
-        run: |
-          echo "Server Image: ${{ secrets.DOCKER_USER_NAME }}/mern-server:latest"
-          echo "Client Image: ${{ secrets.DOCKER_USER_NAME }}/mern-client:latest"
