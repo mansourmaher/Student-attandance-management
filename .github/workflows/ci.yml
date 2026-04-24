@@ -27,7 +27,7 @@ jobs:
 
       - name: Run ESLint
         working-directory: ./server
-        run: npm run lint --if-present || echo "No lint script configured"
+        run: npm run lint
 
   # Lint Client
   lint-client:
@@ -49,7 +49,7 @@ jobs:
 
       - name: Run ESLint
         working-directory: ./client
-        run: npm run lint --if-present || echo "No lint script configured"
+        run: npm run lint 
 
   # Syntax Check Server
   syntax-check-server:
