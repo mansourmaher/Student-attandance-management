@@ -13,5 +13,5 @@ afterAll(async () => {
 // eslint-disable-next-line no-undef
 test("MongoDB connection is successful", () => {
   // eslint-disable-next-line no-undef
-  expect(mongoose.connection.readyState).toBe(0);
+  expect(mongoose.connection.readyState).toBe(1);
 });
