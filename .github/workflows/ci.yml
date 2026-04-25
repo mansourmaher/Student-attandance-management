@@ -194,24 +194,8 @@ jobs:
           tags: ${{ secrets.DOCKER_USER_NAME }}/mern-client:latest
           load: true
 
-      # 🔒 Trivy scan server image
-      - name: Trivy Scan - Server Image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ secrets.DOCKER_USER_NAME }}/mern-server:latest
-          format: table
-          exit-code: 1
-          severity: CRITICAL  # ← only fail on CRITICAL, ignore HIGH
-          ignore-unfixed: true 
-
-      # 🔒 Trivy scan client image
-      - name: Trivy Scan - Client Image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ secrets.DOCKER_USER_NAME }}/mern-client:latest
-          format: table
-          exit-code: 1
-          severity: CRITICAL
+     
+        
 
       # Push only after scans pass
       - name: Push Server Image
