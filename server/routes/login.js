@@ -28,7 +28,7 @@ router.post("/", async (req, res) => {
   if (req.body.user == "Student") {
     const student_pass = await student.findOne({ id: req.body.id });
 
-    if (true) {
+    if (student_pass && student_pass.password === req.body.password) {
       const token_data = { user: req.body.user, id: req.body.id };
       const token = jwt.sign(token_data, process.env.JWT_SECRET_KEY, {
         expiresIn: "1h",
