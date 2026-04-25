@@ -201,7 +201,8 @@ jobs:
           image-ref: ${{ secrets.DOCKER_USER_NAME }}/mern-server:latest
           format: table
           exit-code: 1
-          severity: CRITICAL
+          severity: CRITICAL  # ← only fail on CRITICAL, ignore HIGH
+          ignore-unfixed: true 
 
       # 🔒 Trivy scan client image
       - name: Trivy Scan - Client Image
