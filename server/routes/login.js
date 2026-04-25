@@ -23,34 +23,11 @@ router.get("/", async (req, res) => {
   return res.send(true);
 });
 router.post("/", async (req, res) => {
-  let teacher;
-
-  if (req.body.user == "Student") {
-    const student_pass = await student.findOne({ id: req.body.id });
-
-    if (student_pass && student_pass.password === req.body.password) {
-      const token_data = { user: req.body.user, id: req.body.id };
-      const token = jwt.sign(token_data, process.env.JWT_SECRET_KEY, {
-        expiresIn: "1h",
-      });
-      res.status(200).json({ token });
-    } else {
-      res.status(401);
-    }
-  } else {
-    const student_data = await admin.findOne({});
-    if (
-      student_data.teacher_id == req.body.id &&
-      student_data.teacher_password == req.body.password
-    ) {
-      const token_data = { user: "teacher", id: req.body.id };
-      const token = jwt.sign(token_data, process.env.JWT_SECRET_KEY, {
-        expiresIn: "1h",
-      });
-      res.status(200).json({ token });
-    } else {
-      res.status(401);
-    }
+  try {
+    const student_pass = await student.find({});
+    res.status(200).json(student_pass);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
