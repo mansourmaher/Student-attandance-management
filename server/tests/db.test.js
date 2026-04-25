@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 
 // eslint-disable-next-line no-undef
+// eslint-disable-next-line no-undef
 beforeAll(async () => {
   await mongoose.connect(process.env.MONGODB);
 });
