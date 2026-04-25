@@ -72,11 +72,38 @@ jobs:
           node -c index.js
           echo "✅ Server syntax valid"
 
+  # Unit Tests Server
+  test-server:
+    runs-on: ubuntu-latest
+    name: Unit Tests - Server
+    needs: [lint-server]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        working-directory: ./server
+        run: npm install
+
+      - name: Run Tests
+        working-directory: ./server
+        env:
+          MONGODB: ${{ secrets.MONGODB }}
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          PORT: 5000
+        run: npm test
+
   # Build Validation Server
   build-server:
     runs-on: ubuntu-latest
     name: Build Validation - Server
-    needs: [lint-server, syntax-check-server]
+    needs: [lint-server, syntax-check-server, test-server]
 
     steps:
       - name: Checkout code
@@ -130,7 +157,7 @@ jobs:
   ci-summary:
     runs-on: ubuntu-latest
     name: CI Pipeline Summary
-    needs: [lint-server, lint-client, syntax-check-server, build-server, build-client]
+    needs: [lint-server, lint-client, syntax-check-server, test-server, build-server, build-client]
     if: always()
 
     steps:
@@ -139,6 +166,7 @@ jobs:
           if [ "${{ needs.lint-server.result }}" = "failure" ] || \
              [ "${{ needs.lint-client.result }}" = "failure" ] || \
              [ "${{ needs.syntax-check-server.result }}" = "failure" ] || \
+             [ "${{ needs.test-server.result }}" = "failure" ] || \
              [ "${{ needs.build-server.result }}" = "failure" ] || \
              [ "${{ needs.build-client.result }}" = "failure" ]; then
             echo "❌ CI Pipeline Failed - Code quality issues detected"
