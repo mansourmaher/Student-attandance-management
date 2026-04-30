@@ -68,7 +68,7 @@ const Login = () => {
       {load ? (
         <div className="flex flex-col items-center justify-center">
           <h1 className="font-semibold text-[24px] text-gray-400 mb-12">
-            Welcome to Student attandance<br></br> management login to proceed !
+            using docker file
           </h1>
           <h2 className="font-semibold text-[18px] text-gray-400 mb-12">
             refer the readme{" "}

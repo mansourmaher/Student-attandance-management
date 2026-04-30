@@ -13,7 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     name: Wait for CI Pipeline
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-
     steps:
       - name: CI Passed
         run: |
@@ -25,7 +24,6 @@ jobs:
     runs-on: ubuntu-latest
     name: Build & Push Docker Images
     needs: check-ci
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -57,13 +55,30 @@ jobs:
             ${{ secrets.DOCKER_USER_NAME }}/mern-client:latest
             ${{ secrets.DOCKER_USER_NAME }}/mern-client:${{ github.sha }}
 
-  # Deploy notification
+  # Trigger Render Deployments
+  deploy-to-render:
+    runs-on: ubuntu-latest
+    name: Trigger Render Deployments
+    needs: build-and-push
+    steps:
+      - name: Trigger Render Deploy - Client
+        run: |
+          echo "🚀 Triggering Render deployment for Client..."
+          curl -X POST "https://api.render.com/deploy/srv-d7pthqtckfvc739afrog?key=6H4LxZjAhxE"
+          echo "✅ Client deployment triggered"
+
+      - name: Trigger Render Deploy - Server
+        run: |
+          echo "🚀 Triggering Render deployment for Server..."
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_SERVER }}"
+          echo "✅ Server deployment triggered"
+
+  # Deployment Success
   deploy-success:
     runs-on: ubuntu-latest
     name: Deployment Success
-    needs: build-and-push
+    needs: deploy-to-render
     if: success()
-
     steps:
       - name: Log Deployment Info
         run: |
@@ -73,20 +88,19 @@ jobs:
           echo "  - Server: ${{ secrets.DOCKER_USER_NAME }}/mern-server:latest"
           echo "  - Client: ${{ secrets.DOCKER_USER_NAME }}/mern-client:latest"
           echo ""
-          echo "🚀 Render auto-deployment triggered"
+          echo "🚀 Render deployments triggered for Client & Server"
           echo "📝 Commit: ${{ github.sha }}"
           echo "👤 Author: ${{ github.actor }}"
 
-  # Deployment failure
+  # Deployment Failure
   deploy-failure:
     runs-on: ubuntu-latest
     name: Deployment Failed
-    needs: build-and-push
+    needs: deploy-to-render
     if: failure()
-
     steps:
       - name: Notify Failure
         run: |
           echo "❌ CD Pipeline Failed"
-          echo "Build and push failed. Check logs above."
+          echo "Check logs above for details."
           exit 1

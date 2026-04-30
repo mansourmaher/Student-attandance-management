@@ -93,7 +93,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # needed for SonarQube blame info
+          fetch-depth: 0
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@master
@@ -109,7 +109,6 @@ jobs:
 
       - name: SonarQube Quality Gate
         uses: SonarSource/sonarqube-quality-gate-action@master
-        # Ignore SonarQube failure to prevent blocking CI - we will check results in SonarCloud dashboard
         continue-on-error: true
         timeout-minutes: 5
         env:
@@ -160,7 +159,7 @@ jobs:
         working-directory: ./client
         run: npm audit --audit-level=moderate || true
 
-  # Build Docker Images
+  # Build Docker Images (validation only, no push)
   build-docker:
     runs-on: ubuntu-latest
     name: Build Docker Images
@@ -178,7 +177,7 @@ jobs:
           username: ${{ secrets.DOCKER_USER_NAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build Server Image
+      - name: Build Server Image (validation only)
         uses: docker/build-push-action@v4
         with:
           context: ./server
@@ -186,7 +185,7 @@ jobs:
           tags: ${{ secrets.DOCKER_USER_NAME }}/mern-server:latest
           load: true
 
-      - name: Build Client Image
+      - name: Build Client Image (validation only)
         uses: docker/build-push-action@v4
         with:
           context: ./client
@@ -194,29 +193,7 @@ jobs:
           tags: ${{ secrets.DOCKER_USER_NAME }}/mern-client:latest
           load: true
 
-     
-        
-
-      # Push only after scans pass
-      - name: Push Server Image
-        uses: docker/build-push-action@v4
-        with:
-          context: ./server
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USER_NAME }}/mern-server:latest
-            ${{ secrets.DOCKER_USER_NAME }}/mern-server:${{ github.sha }}
-
-      - name: Push Client Image
-        uses: docker/build-push-action@v4
-        with:
-          context: ./client
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USER_NAME }}/mern-client:latest
-            ${{ secrets.DOCKER_USER_NAME }}/mern-client:${{ github.sha }}
-
-  # Summary
+  # CI Summary
   ci-summary:
     runs-on: ubuntu-latest
     name: CI Pipeline Summary
